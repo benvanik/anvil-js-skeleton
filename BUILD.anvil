@@ -1,0 +1,299 @@
+# Copyright 2012 {<ANVIL_COPYRIGHT>}. All Rights Reserved.
+
+__author__ = '{<ANVIL_AUTHOR_EMAIL>} ({<ANVIL_AUTHOR_NAME>})'
+
+
+# Master anvil-build BUILD file for {<ANVIL_PROJECT_NAME>}.
+
+
+# ------------------------------------------------------------------------------
+# Third Party
+# ------------------------------------------------------------------------------
+
+JS_COMPILER_JAR='third_party:closure_compiler_jar'
+GSS_COMPILER_JAR='third_party:closure_stylesheets_jar'
+SOY_COMPILER_JAR='third_party:closure_templates_jar'
+file_set(
+    name='closure_externs',
+    srcs=glob('externs/**/*.js'))
+
+
+# ------------------------------------------------------------------------------
+# Static Content
+# ------------------------------------------------------------------------------
+
+COMMON_STATIC_FILES=[
+    #'assets/...?',
+    ]
+
+copy_files(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_static',
+    srcs=COMMON_STATIC_FILES + [
+        #'assets/',
+        ])
+
+
+# ------------------------------------------------------------------------------
+# CSS
+# ------------------------------------------------------------------------------
+
+# All CSS, in the proper order
+file_set(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_css',
+    srcs=[
+        'assets/css:shared_css',
+        ] + glob('src/{<ANVIL_PROJECT_NAMESPACE>}/**/*.gss'))
+
+# Single-file debug CSS
+closure_gss_library(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_css_debug_compiled',
+    mode='DEBUG_COMPILED',
+    pretty_print=True,
+    srcs=':{<ANVIL_PROJECT_NAMESPACE>}_css',
+    compiler_jar=GSS_COMPILER_JAR)
+
+# Single-file optimized CSS + JS renaming map
+closure_gss_library(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_css_compiled',
+    mode='COMPILED',
+    srcs=':{<ANVIL_PROJECT_NAMESPACE>}_css',
+    compiler_jar=GSS_COMPILER_JAR)
+# Just the .css file
+file_set(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_css_compiled_only',
+    srcs=':{<ANVIL_PROJECT_NAMESPACE>}_css_compiled',
+    src_filter='*.css')
+
+
+# ------------------------------------------------------------------------------
+# Soy Templates
+# ------------------------------------------------------------------------------
+
+closure_soy_library(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_soy_js',
+    srcs=glob('src/{<ANVIL_PROJECT_NAMESPACE>}/**/*.soy'),
+    compiler_jar=SOY_COMPILER_JAR)
+
+file_set(
+    name='all_soy_js',
+    srcs=[
+        ':{<ANVIL_PROJECT_NAMESPACE>}_soy_js'
+        ])
+
+
+# ------------------------------------------------------------------------------
+# JavaScript
+# ------------------------------------------------------------------------------
+
+file_set(
+    name='all_src_js',
+    srcs=glob('src/**/*.js'))
+
+SHARED_JS_FLAGS=[
+    ]
+
+RELEASE_JS_FLAGS=[
+    '--define=goog.DEBUG=false',
+    '--define=goog.asserts.ENABLE_ASSERTS=false',
+    '--use_types_for_optimization',
+    '--language_in=ECMASCRIPT5_STRICT',
+    #'--collapse_variable_declarations',
+    #'--collapse_anonymous_functions',
+    #'--collapse_properties',
+    #'--disambiguate_properties',
+    # rewrites things to be smaller but likely not better
+    # http://code.google.com/p/closure-compiler/source/browse/trunk/src/com/google/javascript/jscomp/FunctionRewriter.java
+    #'--rewrite_function_expressions=false',
+    # slow - may want disabled
+    #'--devirtualize_prototype_methods',
+    #'--devirtualize_prototype_methods=false',
+    ]
+
+ENTRY_POINTS=[
+    '{<ANVIL_PROJECT_NAMESPACE>}.exports',
+    ]
+
+ALL_ENTRY_POINTS=[
+    '{<ANVIL_PROJECT_NAMESPACE>}.exports',
+    ]
+
+# deps.js only
+closure_js_library(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_js_deps',
+    out='{<ANVIL_PROJECT_NAMESPACE>}_js',
+    mode='DEPS',
+    entry_points=ALL_ENTRY_POINTS,
+    srcs=[
+        'third_party:all_closure_js',
+        ':all_src_js',
+        ':all_soy_js',
+        ],
+    compiler_jar=JS_COMPILER_JAR)
+
+
+file_set(
+    name='all_uncompiled_js',
+    srcs=[
+        'third_party:all_closure_js',
+        'third_party:closure_uncompiled_js',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_css_debug_compiled',
+        ':all_soy_js',
+        ':all_src_js',
+        ])
+
+# All compiled JS
+file_set(
+    name='all_compiled_js',
+    srcs=[
+        'third_party:all_closure_js',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_css_compiled',
+        ':all_soy_js',
+        ':all_src_js',
+        ])
+
+closure_js_library(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_js_uncompiled',
+    deps_out='{<ANVIL_PROJECT_NAMESPACE>}_js',
+    mode='UNCOMPILED',
+    entry_points=ENTRY_POINTS,
+    srcs=':all_uncompiled_js',
+    externs=[':closure_externs'],
+    compiler_jar=JS_COMPILER_JAR,
+    wrap_with_global='this')
+
+closure_js_library(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_js_compiled',
+    deps_out='{<ANVIL_PROJECT_NAMESPACE>}_js',
+    mode='ADVANCED',
+    entry_points=ENTRY_POINTS,
+    srcs=':all_compiled_js',
+    externs=[':closure_externs'],
+    compiler_jar=JS_COMPILER_JAR,
+    compiler_flags=SHARED_JS_FLAGS + RELEASE_JS_FLAGS + [
+        '--define={<ANVIL_PROJECT_NAMESPACE>}.exports.ENABLE_EXPORTS=true',
+        ],
+    wrap_with_global='this')
+
+file_set(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_js_debug',
+    srcs=[
+        ':testing_files',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_js_uncompiled',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_static',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_css_debug_compiled',
+        ])
+file_set(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_js_release',
+    srcs=[
+        ':{<ANVIL_PROJECT_NAMESPACE>}_js_compiled',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_static',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_css_compiled_only',
+        ],
+    src_exclude_filter='*-deps.js')
+
+
+# ------------------------------------------------------------------------------
+# JS linting
+# ------------------------------------------------------------------------------
+
+CLOSURE_LINTER_PATH='third_party/closure-linter/'
+
+closure_js_fixstyle(
+    name='all_js_fixstyle',
+    namespaces=['goog', '{<ANVIL_PROJECT_NAMESPACE>}',],
+    srcs=[':all_src_js'],
+    linter_path=CLOSURE_LINTER_PATH)
+
+closure_js_lint(
+    name='all_js_lint',
+    namespaces=['goog', '{<ANVIL_PROJECT_NAMESPACE>}',],
+    srcs=[':all_src_js'],
+    linter_path=CLOSURE_LINTER_PATH)
+
+
+# ------------------------------------------------------------------------------
+# Testing
+# ------------------------------------------------------------------------------
+
+TEST_REQUIRES=[
+    ('node module', 'mocha@1.4.2'),
+    ('node module', 'chai@1.2.0'),
+    ]
+
+file_set(
+    name='testing_files',
+    srcs=[
+        'node_modules/mocha/mocha.js',
+        'node_modules/mocha/mocha.css',
+        'node_modules/chai/chai.js',
+        ])
+
+file_set(
+    name='test_external',
+    deps=[':fast'],
+    requires=TEST_REQUIRES)
+
+shell_execute(
+    name='{<ANVIL_PROJECT_NAMESPACE>}_js_test',
+    srcs=glob('src/**/*_test.js'),
+    deps=[':fast'],
+    command=[
+        'node_modules/mocha/bin/mocha',
+        '--ui', 'tdd',
+        '--reporter', 'dot',
+        '--require', 'src/{<ANVIL_PROJECT_NAMESPACE>}/bootstrap/mocha.js',
+        ],
+    requires=TEST_REQUIRES)
+
+
+# ------------------------------------------------------------------------------
+# Target rules
+# ------------------------------------------------------------------------------
+
+file_set(
+    name='setup',
+    requires=[
+        ('node', '>=0.6.14'),
+        ] + TEST_REQUIRES)
+
+file_set(
+    name='lint',
+    deps=':all_js_lint')
+
+file_set(
+    name='fixstyle',
+    deps=':all_js_fixstyle')
+
+file_set(
+    name='fast',
+    deps=[
+        ':{<ANVIL_PROJECT_NAMESPACE>}_js_deps',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_css_debug_compiled',
+        ])
+
+file_set(
+    name='deps',
+    srcs=[
+        ':{<ANVIL_PROJECT_NAMESPACE>}_js_deps',
+        ])
+
+file_set(
+    name='test',
+    deps=[':{<ANVIL_PROJECT_NAMESPACE>}_js_test'])
+
+file_set(
+    name='debug',
+    srcs=[
+        ':deps',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_js_debug',
+        ])
+
+file_set(
+    name='release',
+    srcs=[
+        ':deps',
+        ':{<ANVIL_PROJECT_NAMESPACE>}_js_release',
+        ],
+    deps=[
+        #':all_js_lint',
+        ])

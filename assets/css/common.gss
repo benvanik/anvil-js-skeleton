@@ -1,0 +1,14 @@
+/**
+ * Copyright 2012 {<ANVIL_COPYRIGHT>}. All Rights Reserved.
+ *
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
+/**
+ * You could place common definitions or mixins here.
+ * Place this file first in the source list to the compile task to ensure the
+ * other files see the definitions.
+ *
+ * @author {<ANVIL_AUTHOR_EMAIL>} ({<ANVIL_AUTHOR_NAME>})
+ */

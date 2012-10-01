@@ -1,0 +1,11 @@
+# Copyright 2012 {<ANVIL_COPYRIGHT>}. All Rights Reserved.
+
+__author__ = '{<ANVIL_AUTHOR_EMAIL>} ({<ANVIL_AUTHOR_NAME>})'
+
+
+# An ordered list of all CSS files used by the project
+file_set(
+    name='shared_css',
+    srcs=[
+        'common.gss',
+        ])
